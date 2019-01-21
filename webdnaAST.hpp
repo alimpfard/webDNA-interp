@@ -35,20 +35,57 @@ typedef struct {
 class ExprNode;
 class EvalContext;
 class BlockExprNode;
+class FunctionNode;
 
 Value dummy_inner_ty(int, std::vector<Value*>, BlockExprNode, EvalContext&);
 typedef decltype(dummy_inner_ty) lib_func_type;
 
 typedef struct {
     int argument_count;
-    bool needs_end;
-    lib_func_type* native_fn;
+    bool is_single_tag;
+    int ty: 3;
+
+    union {
+        lib_func_type* native_fn;
+        FunctionNode*  user_defined_fn;
+        Value*         value;
+    };
 } TagDescriptor;
+
+class EvalFrame {
+public:
+    std::map<std::string, TagDescriptor> tags;
+
+    inline void putSymbol(std::string name, TagDescriptor descr) {
+        tags[name] = descr;
+    }
+};
 
 class EvalContext {
 public:
-    std::map<std::string, TagDescriptor> tags;
-    std::stack<EvalContext*> blocks;
+    std::vector<std::shared_ptr<EvalFrame>> frames;
+
+    std::shared_ptr<EvalFrame> pushBlock() {
+        auto frame = std::make_shared<EvalFrame>();
+        frames.push_back(frame);
+        return frame;
+    }
+
+    std::shared_ptr<EvalFrame> popBlock() {
+        auto frame = top();
+        frames.pop_back();
+        return frame;
+    }
+    std::shared_ptr<EvalFrame> top() const { return frames.back(); }
+    TagDescriptor& findSymbol(std::string name) {
+        for (auto iter = frames.rbegin(); iter != frames.rend(); ++iter)
+        {
+            auto frame = *iter;
+            if (frame->tags.count(name) > 0)
+                return frame->tags[name];
+        }
+        return top()->tags[name];
+    }
 };
 
 class ASTNode {
@@ -69,6 +106,23 @@ public:
 
     virtual Value evaluate(EvalContext&);
     virtual int ty() { return 0; }
+};
+
+class FunctionNode: public ExprNode {
+public:
+    std::string name;
+    std::vector<std::string> params;
+
+    std::vector<ExprNode*> args;
+    BlockExprNode body;
+    using InsideItType = decltype(body.code)::iterator;
+    using ReverseInsideItType = decltype(body.code)::reverse_iterator;
+
+    FunctionNode(std::string name, std::vector<std::string> params, BlockExprNode body)
+        : name(name), params(params), body(body) {}
+
+    virtual Value evaluate(EvalContext&);
+    virtual int ty() { return 1; }
 };
 
 class InterpredText: public ExprNode {

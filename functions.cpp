@@ -7,6 +7,7 @@
 
 extern std::string to_text(Value);
 extern bool to_bool(Value);
+extern std::string strip(std::string);
 
 LIBRARY_FUNCTION(date) {
     char buf[1024];
@@ -99,26 +100,47 @@ LIBRARY_FUNCTION(comment) {
     return {{1},{""}};
 }
 
-// LIBRARY_FUNCTION(fnexpr) {
-//     if (args.size() < 1)
-//         return {{1}, {0}};
-//
-//     std::string name = to_text(*args[0]);
-//     std::vector<std::string> fnargs;
-//     bool params = false;
-//     for (auto nit = inside.code.begin(); nit != inside.code.end(); ++nit)
-//     {
-//         ExprNode* node = *nit;
-//         if (node->ty() == 1) {
-//             InterpredText* cand = dynamic_cast<InterpredText*>(node);
-//             if (cand->name == "params" && !params) {
-//                 params = true;
-//                 fnargs = fmap([](ExprNode* node){
-//                         if (node->ty() != 0) return std::string("");
-//                         return ((LiteralText*) node)->value;
-//                     }, cand->contained.code);
-//             }
-//
-//         }
-//     }
-// }
+LIBRARY_FUNCTION(fnexpr) {
+    if (args.size() < 1)
+        return {{1}, {0}};
+
+    std::string name = to_text(*args[0]);
+    std::vector<std::string> fnargs;
+    bool params = false;
+    BlockExprNode body;
+    body.parsed = true;
+
+    for (auto nit = inside.code.begin(); nit != inside.code.end(); ++nit)
+    {
+        bool skip = false;
+        ExprNode* node = *nit;
+        if (node->ty() == 1) {
+            InterpredText* cand = dynamic_cast<InterpredText*>(node);
+            if (cand->name == "params" && !params) {
+                skip = true;
+                params = true;
+                fnargs = fmap([](ExprNode* node){
+                        if (node->ty() != 2) return std::string("");
+                        return strip(((LiteralText*) node)->value);
+                    }, cand->contained.code);
+            }
+        }
+        if (params && !skip) {
+            body.code.push_back(node);
+        }
+    }
+    ctx.top()->putSymbol(name,
+        TagDescriptor {
+            static_cast<int>(fnargs.size()),
+            true,
+            1,
+            {.user_defined_fn = new FunctionNode(name, fnargs, body)}
+        }
+    );
+    return {{1},{""}};
+}
+
+LIBRARY_FUNCTION(strconcat) {
+    std::vector<std::string> expr = fmap([&](ExprNode* x){ return to_text(x->evaluate(ctx)); }, inside.code);
+    return {{1}, {strdup(join_array(expr, "").c_str())}};
+}
