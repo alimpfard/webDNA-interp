@@ -35,10 +35,17 @@ std::string join_array_reverse(std::vector<std::string> arr, std::string del) {
     return s;
 }
 
+std::string maybe_wrap(std::string s) {
+    if (s.find(' ') != s.npos || s.find('\t') != s.npos || s.find('\n') != s.npos || s.find('\r') != s.npos)
+        return "'" + s + "'";
+    return s;
+}
+
 bool boolean_expr(std::vector<Value*> inside, EvalContext& ctx) {
-    std::vector<std::string> expr = fmap([](Value* x){ return to_text(*x); }, inside);
+    std::vector<std::string> expr = fmap([](Value* x){ return maybe_wrap(to_text(*x)); }, inside);
+    std::string s = join_array(expr, "");
     // std::cout << s << '\n';
-    yyexpr_scan_string((join_array(expr, "") + "\n").c_str());
+    yyexpr_scan_string((s + "\n").c_str());
     yyexprparse();
     return expr_result == 1;
 }

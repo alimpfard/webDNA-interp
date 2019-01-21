@@ -82,7 +82,6 @@ void InterpredText::parseForward(InterpredText::InsideItType& iter, InterpredTex
     bool okay = false;
     if (name == "function") {
         std::string iname = to_text(args[0]->evaluate(ctx));
-        std::cout << "Declare function '" << iname << "'\n";
         ctx.top()->putSymbol(iname, TagDescriptor { 0, true, 2, {nullptr} });
         ctx.pushBlock();
     }
@@ -97,11 +96,13 @@ void InterpredText::parseForward(InterpredText::InsideItType& iter, InterpredTex
             goto skip1;
         case 1:
             if (((InterpredText*)node)->name == "/" + name) { okay = true; goto NOMORE; }
+            else if (name == "!") goto skip2;
             else
                 ((InterpredText*)node)->parseForward(iter, end, ctx);
         default:
             skip1:
             contained.code.push_back(node);
+            skip2:;
         }
     }
     iter--; // compensate for for loop above
@@ -119,7 +120,6 @@ void InterpredText::parseForward(InterpredText::ReverseInsideItType& iter, Inter
     bool okay = false;
     if (name == "function") {
         std::string iname = to_text(args[0]->evaluate(ctx));
-        std::cout << "Declare function '" << iname << "'\n";
         ctx.top()->putSymbol(iname, TagDescriptor { 0, true, 2, {nullptr} });
         ctx.pushBlock();
     }
@@ -138,12 +138,14 @@ void InterpredText::parseForward(InterpredText::ReverseInsideItType& iter, Inter
                 okay = true;
                 goto NOMORE;
             }
+            else if (name == "!") goto skip2;
             else {
                 inode->parseForward(iter, end, ctx);
             }
         default:
             skip1:
             contained.code.push_back(node);
+            skip2:;
         }
     }
     iter--; // compensate for for loop above
@@ -209,11 +211,11 @@ int main() {
     }
     EvalContext ctx {{
         std::shared_ptr<EvalFrame>(new EvalFrame {{
+            {"!",        {0, false, 0, {&comment}}},
             {"date",     {0, true,  0, {&date}}},
             {"showif",   {1, false, 0, {&showif}}},
             {"math",     {1, true,  0, {&mexpr}}},
             {"if",       {1, false, 0, {&ifexpr}}},
-            {"!",        {0, false, 0, {&comment}}},
             {"function", {1, false, 0, {&fnexpr}}},
             {"concat",   {0, false, 0, {&strconcat}}},
         }})

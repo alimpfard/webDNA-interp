@@ -1,14 +1,15 @@
 [date]
 "
 "
-[function test]
+[function format_date]
   [params]
     name
   [/params]
-  [concat]
-    [name]
-    [date]
-  [/concat]
+    [!][concat][/!]
+      [name]
+      " :: "
+      [date [name]]
+    [!][/concat][/!]
 [/function]
 
 [showif [date %C]=[date [date %C]]]
@@ -19,7 +20,7 @@
   [if [math 1=4]]
     [else]
       Skip then branch
-      [test "today is "]
+      [format_date "%A %D %M"]
     [/else]
   [/if]
  [/then]

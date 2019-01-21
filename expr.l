@@ -25,6 +25,11 @@ ident [a-zA-Z_][a-zA-Z0-9_]*
   yyexprlval.sval = (struct svalue){.val = strdup(yytext), .length = yyleng};
   return STRING;
 }
+(?s:['][^']*[']) {
+  yyexprlval.ty = 1;
+  yyexprlval.sval = (struct svalue){.val = strdup(yytext+1), .length = yyleng-2};
+  return STRING;
+}
 
 "+"  return PLUS;
 "-"  return MINUS;
