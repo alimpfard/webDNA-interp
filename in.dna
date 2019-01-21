@@ -1,0 +1,19 @@
+[date]
+"
+"
+[showif [date %C]=[date [date %C]]]
+"     Hello, it's a funny day?  "
+[if [math 1=1]]
+ [then]
+  One is one!
+  [if [math 1=4]]
+    [else]
+      Skip then branch
+    [/else]
+  [/if]
+ [/then]
+ [else]
+  One is not one!?!??!?!?!?!?
+ [/else]
+[/if]
+[/showif]
